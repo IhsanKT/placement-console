@@ -62,6 +62,18 @@
   @keyframes pulse { 0%,100% { transform: scale(1); opacity: 1; } 50% { transform: scale(.6); opacity: .55; } }
   .brand h1 { font-size: 17px; font-weight: 600; margin: 0; letter-spacing: -.01em; }
   .brand small { display: block; font-family: var(--mono); font-size: 10.5px; color: var(--muted); letter-spacing: .14em; text-transform: uppercase; }
+  .top-right { display: flex; align-items: center; gap: 18px; }
+  .sync-pill {
+    display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--line); background: var(--surface);
+    border-radius: 999px; padding: 6px 13px 6px 11px; font-family: var(--mono); font-size: 11.5px; color: var(--ink-2);
+    cursor: pointer; white-space: nowrap; transition: border-color .12s;
+  }
+  .sync-pill:hover { border-color: var(--line-strong); color: var(--ink); }
+  .sync-pill i { width: 7px; height: 7px; border-radius: 50%; background: var(--done); }
+  .sync-pill.ok i { background: var(--accent); }
+  .sync-pill.busy i { background: var(--live); animation: pulse 1s ease-in-out infinite; }
+  .sync-pill.warn i { background: var(--today); }
+  .sync-pill.bad i { background: var(--danger); }
   .clock { font-family: var(--mono); text-align: right; font-size: 12px; color: var(--ink-2); }
   .clock b { display: block; font-size: 18px; font-weight: 500; color: var(--ink); letter-spacing: .02em; }
 
@@ -206,12 +218,36 @@
   .modal-foot { display: flex; justify-content: space-between; gap: 10px; padding: 16px 24px 20px; border-top: 1px solid var(--line); }
   .modal-foot .right { display: flex; gap: 8px; margin-left: auto; }
 
+  .sync-body { padding: 20px 24px; display: grid; gap: 16px; }
+  .sync-body p { margin: 0; color: var(--ink-2); font-size: 14px; }
+  .sync-body a { color: var(--live); text-decoration: none; border-bottom: 1px solid currentColor; }
+  .steps { margin: 0; padding: 0; list-style: none; counter-reset: step; display: grid; gap: 10px; }
+  .steps li { counter-increment: step; display: grid; grid-template-columns: 26px 1fr; gap: 10px; font-size: 14px; color: var(--ink-2); }
+  .steps li::before {
+    content: counter(step, decimal-leading-zero); font-family: var(--mono); font-size: 11px; color: var(--ink);
+    border: 1px solid var(--line); border-radius: 7px; height: 22px; display: grid; place-items: center; margin-top: 1px;
+  }
+  .steps b { color: var(--ink); font-weight: 600; }
+  .sync-err { font-family: var(--mono); font-size: 12.5px; color: var(--danger); background: #f7e9e7; border-radius: 10px; padding: 8px 12px; }
+  .sync-status { display: flex; gap: 12px; align-items: flex-start; padding: 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface-2); }
+  .sync-status .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--accent); margin-top: 6px; flex: none; animation: pulse 2.4s ease-in-out infinite; }
+  .sync-status b { display: block; font-weight: 600; }
+  .sync-status span { font-family: var(--mono); font-size: 11.5px; color: var(--muted); }
+  .pair { display: grid; grid-template-columns: 156px 1fr; gap: 18px; align-items: center; }
+  .qr { width: 156px; height: 156px; padding: 4px; border: 1px solid var(--line); border-radius: 12px; display: grid; place-items: center; background: #fff; }
+  .qr img, .qr canvas { display: block; width: 146px !important; height: 146px !important; }
+  .copyrow { display: flex; gap: 8px; margin-top: 10px; }
+  .copyrow input { flex: 1; min-width: 0; border: 1px solid var(--line); border-radius: 10px; padding: 7px 10px; background: var(--surface-2); font-family: var(--mono); font-size: 12px; color: var(--ink-2); }
+  @media (max-width: 520px) { .pair { grid-template-columns: 1fr; justify-items: center; text-align: center; } }
+
   .toast {
     position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%) translateY(20px); opacity: 0;
     background: var(--ink); color: #fff; padding: 10px 16px; border-radius: 12px; font-family: var(--mono); font-size: 12.5px;
     transition: all .25s ease; pointer-events: none; z-index: 50;
   }
   .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  /* shown as a popover so it sits above open dialogs */
+  .toast[popover] { inset: auto; top: auto; right: auto; left: 50%; bottom: 24px; margin: 0; border: 0; overflow: visible; }
 
   :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
@@ -226,6 +262,9 @@
     .seg button { flex: 1; padding: 7px 6px; }
     .modal-body { grid-template-columns: 1fr; }
     .clock b { font-size: 15px; }
+  }
+  @media (max-width: 560px) {
+    .clock { display: none; }
   }
   @media (max-width: 420px) {
     .brand small { display: none; }
@@ -247,9 +286,12 @@
         <small>Test schedule · v1</small>
       </div>
     </div>
-    <div class="clock">
-      <b id="clockTime">--:--:--</b>
-      <span id="clockDate">—</span>
+    <div class="top-right">
+      <button class="sync-pill" id="syncPill" title="Sync across devices"><i></i><span>Sync off</span></button>
+      <div class="clock">
+        <b id="clockTime">--:--:--</b>
+        <span id="clockDate">—</span>
+      </div>
     </div>
   </header>
 
@@ -276,7 +318,7 @@
   <main id="list"></main>
 
   <footer>
-    <p>Your schedule is saved in this browser only. Export a backup now and then, and import it on another device to move your data across.</p>
+    <p id="footNote">Your schedule is saved on this device. Turn on <b>Sync</b> (top right) to keep your laptop and phone in step.</p>
     <div class="actions">
       <button class="btn ghost sm" id="exportBtn">Export backup</button>
       <button class="btn ghost sm" id="importBtn">Import</button>
@@ -365,27 +407,39 @@
   </div>
 </dialog>
 
-<div class="toast" id="toast"></div>
+<!-- sync modal (content rendered by script) -->
+<dialog id="syncDlg"></dialog>
+
+<div class="toast" id="toast" popover="manual"></div>
 
 <script>
 (() => {
   const KEY = "placement-console.tests.v1";
+  const DEL_KEY = "placement-console.deleted.v1";   // id -> deletion time, so deletes sync too
+  const SYNC_KEY = "placement-console.sync.v1";
+  const GIST_FILE = "placement-console.json";
+  const API = "https://api.github.com";
   const DEFAULT_DURATION = 90; // minutes, used to decide when a test counts as finished
   const $ = (s) => document.querySelector(s);
 
   // ---------- storage ----------
-  function load() {
-    try {
-      const raw = localStorage.getItem(KEY);
-      const data = raw ? JSON.parse(raw) : [];
-      return Array.isArray(data) ? data : [];
-    } catch { return []; }
+  function read(key, fallback) {
+    try { const raw = localStorage.getItem(key); return raw ? JSON.parse(raw) : fallback; }
+    catch { return fallback; }
   }
-  function save() {
-    try { localStorage.setItem(KEY, JSON.stringify(tests)); }
-    catch { toast("Could not save — browser storage is unavailable"); }
+  function write(key, value) {
+    try { localStorage.setItem(key, JSON.stringify(value)); return true; }
+    catch { return false; }
   }
-  let tests = load();
+  function persist() {
+    if (!write(KEY, tests) || !write(DEL_KEY, deleted)) toast("Could not save — browser storage is unavailable");
+  }
+  function save() { persist(); scheduleSync(); }
+
+  let tests = read(KEY, []);
+  if (!Array.isArray(tests)) tests = [];
+  let deleted = read(DEL_KEY, {});
+  if (!deleted || typeof deleted !== "object") deleted = {};
   let filter = "upcoming";
   let query = "";
   let editingId = null;
@@ -618,7 +672,7 @@
     modal.showModal();
     setTimeout(() => form.company.focus(), 30);
   }
-  const closeModal = () => { modal.close(); editingId = null; };
+  const closeModal = () => { modal.close(); editingId = null; render(); };
 
   form.addEventListener("submit", (e) => {
     e.preventDefault();
@@ -643,13 +697,13 @@
         toast(moved ? `${entry.company} rescheduled` : `${entry.company} updated`);
       }
     } else {
-      tests.push({ id: uid(), ...entry, history: [], createdAt: new Date().toISOString() });
+      const ts = new Date().toISOString();
+      tests.push({ id: uid(), ...entry, history: [], createdAt: ts, updatedAt: ts });
       toast(`${entry.company} added`);
       if (statusOf(entry) === "done") filter = "all";
     }
     save();
     closeModal();
-    render();
   });
 
   // ---------- delete with confirm ----------
@@ -663,10 +717,11 @@
     $("#confirmText").textContent = `${t.test} on ${fmtDate(startOf(t))} will be removed from your schedule. This can't be undone.`;
     confirmDlg.showModal();
   }
-  $("#confirmNo").onclick = () => { confirmDlg.close(); pendingDelete = null; };
+  $("#confirmNo").onclick = () => { confirmDlg.close(); pendingDelete = null; if (!modal.open) render(); };
   $("#confirmYes").onclick = () => {
     const t = tests.find((x) => x.id === pendingDelete);
     tests = tests.filter((x) => x.id !== pendingDelete);
+    deleted[pendingDelete] = new Date().toISOString();
     save();
     confirmDlg.close();
     if (modal.open) closeModal();
@@ -727,7 +782,12 @@
       const valid = incoming.filter((t) => t && t.company && t.test && /^\d{4}-\d{2}-\d{2}$/.test(t.date) && /^\d{2}:\d{2}/.test(t.time));
       // merge: imported entries replace ones with the same id, everything else is added
       const byId = new Map(tests.map((t) => [t.id, t]));
-      valid.forEach((t) => { const id = t.id || uid(); byId.set(id, { history: [], ...t, id }); });
+      const ts = new Date().toISOString();
+      valid.forEach((t) => {
+        const id = t.id || uid();
+        byId.set(id, { history: [], ...t, id, updatedAt: ts });
+        delete deleted[id];
+      });
       tests = [...byId.values()];
       save(); render();
       toast(`Imported ${valid.length} test${valid.length === 1 ? "" : "s"}`);
@@ -736,12 +796,316 @@
     }
   };
 
+  // ---------- cross-device sync ----------
+  // The schedule is mirrored to a secret Gist on the user's own GitHub account.
+  // Every device keeps a full local copy; a sync pulls the Gist, merges it with
+  // local data (newest edit per test wins, deletions are remembered), saves the
+  // result locally and pushes it back if anything changed.
+  let syncCfg = read(SYNC_KEY, {}) || {};   // { token, login, gistId, lastSync }
+  const saveSyncCfg = () => write(SYNC_KEY, syncCfg);
+  let syncState = syncCfg.token ? "busy" : "off";
+  let syncError = "";
+  let syncInFlight = null, syncAgain = false, syncTimer = null;
+
+  const stamp = (t) => t.updatedAt || t.createdAt || "";
+  const canon = (d) => JSON.stringify({
+    tests: [...(d.tests || [])].sort((a, b) => (a.id < b.id ? -1 : 1)),
+    deleted: Object.fromEntries(Object.entries(d.deleted || {}).sort()),
+  });
+
+  function mergeData(remote) {
+    const del = { ...(remote.deleted || {}) };
+    for (const [id, ts] of Object.entries(deleted)) if (!del[id] || ts > del[id]) del[id] = ts;
+    const cutoff = new Date(Date.now() - 120 * 86400000).toISOString();
+    for (const id of Object.keys(del)) if (del[id] < cutoff) delete del[id];
+    const byId = new Map();
+    for (const t of [...(remote.tests || []), ...tests]) {
+      if (!t || !t.id) continue;
+      const cur = byId.get(t.id);
+      if (!cur || stamp(t) > stamp(cur)) byId.set(t.id, t);
+    }
+    return { tests: [...byId.values()].filter((t) => !(del[t.id] && del[t.id] >= stamp(t))), deleted: del };
+  }
+
+  async function gh(path, opts = {}, token = syncCfg.token) {
+    const res = await fetch(API + path, {
+      cache: "no-store",
+      ...opts,
+      headers: {
+        Accept: "application/vnd.github+json",
+        Authorization: `Bearer ${token}`,
+        ...(opts.body ? { "Content-Type": "application/json" } : {}),
+      },
+    });
+    if (!res.ok) { const err = new Error(`GitHub responded ${res.status}`); err.status = res.status; throw err; }
+    return res;
+  }
+
+  async function findGist() {
+    for (let page = 1; page <= 10; page++) {
+      const list = await (await gh(`/gists?per_page=100&page=${page}`)).json();
+      const hit = list.find((g) => g.files && g.files[GIST_FILE]);
+      if (hit) return (await gh(`/gists/${hit.id}`)).json();
+      if (list.length < 100) break;
+    }
+    return null;
+  }
+
+  async function remoteData(gist) {
+    const empty = { tests: [], deleted: {} };
+    const f = gist && gist.files && gist.files[GIST_FILE];
+    if (!f) return empty;
+    try {
+      const text = f.truncated ? await (await fetch(f.raw_url, { cache: "no-store" })).text() : f.content;
+      const d = JSON.parse(text);
+      return { tests: Array.isArray(d.tests) ? d.tests : [], deleted: d.deleted && typeof d.deleted === "object" ? d.deleted : {} };
+    } catch { return empty; }
+  }
+
+  const payload = () => JSON.stringify({ app: "placement-console", version: 2, savedAt: new Date().toISOString(), tests, deleted }, null, 2);
+
+  function syncNow() {
+    if (!syncCfg.token) return Promise.resolve();
+    if (syncInFlight) { syncAgain = true; return syncInFlight; }
+    setSyncState("busy");
+    syncInFlight = (async () => {
+      try {
+        let gist = null;
+        if (syncCfg.gistId) {
+          try { gist = await (await gh(`/gists/${syncCfg.gistId}`)).json(); }
+          catch (e) { if (e.status !== 404) throw e; }
+        }
+        if (!gist) gist = await findGist();
+        const remote = await remoteData(gist);
+        const before = canon({ tests, deleted });
+        const merged = mergeData(remote);
+        tests = merged.tests;
+        deleted = merged.deleted;
+        persist();
+        const files = { [GIST_FILE]: { content: payload() } };
+        if (!gist) {
+          gist = await (await gh("/gists", { method: "POST", body: JSON.stringify({ description: "Placement Console — synced test schedule", public: false, files }) })).json();
+        } else if (canon(merged) !== canon(remote)) {
+          await gh(`/gists/${gist.id}`, { method: "PATCH", body: JSON.stringify({ files }) });
+        }
+        syncCfg.gistId = gist.id;
+        syncCfg.lastSync = new Date().toISOString();
+        saveSyncCfg();
+        if (canon(merged) !== before && !modal.open && !confirmDlg.open) render();
+        setSyncState("ok");
+      } catch (e) {
+        if (e.status === 401) setSyncState("auth", "GitHub rejected the key — it may have expired or been deleted. Paste a new one to reconnect.");
+        else if (navigator.onLine === false) setSyncState("offline");
+        else setSyncState("error", e.message || "Couldn't reach GitHub.");
+      } finally {
+        syncInFlight = null;
+        if (syncAgain) { syncAgain = false; syncNow(); }
+      }
+    })();
+    return syncInFlight;
+  }
+
+  function scheduleSync() {
+    if (!syncCfg.token) return;
+    clearTimeout(syncTimer);
+    syncTimer = setTimeout(syncNow, 500);
+  }
+
+  async function connect(token) {
+    token = token.trim();
+    const res = await gh("/user", {}, token);
+    const scopes = res.headers.get("X-OAuth-Scopes");
+    if (scopes !== null && !/\bgist\b/.test(scopes)) {
+      const err = new Error("This key doesn't have the “gist” permission. Create a new one with the gist box ticked.");
+      err.status = "scope";
+      throw err;
+    }
+    const user = await res.json();
+    syncCfg = { token, login: user.login };
+    saveSyncCfg();
+    await syncNow();
+    if (syncState !== "ok") throw new Error(syncError || "Connected, but the first sync failed.");
+  }
+
+  function disconnect() {
+    clearTimeout(syncTimer);
+    syncCfg = {};
+    try { localStorage.removeItem(SYNC_KEY); } catch {}
+    setSyncState("off");
+    toast("Sync turned off on this device");
+  }
+
+  const SYNC_PILL = {
+    off:     ["", "Sync off"],
+    busy:    ["busy", "Syncing…"],
+    ok:      ["ok", "Synced"],
+    offline: ["warn", "Offline"],
+    auth:    ["bad", "Reconnect"],
+    error:   ["warn", "Sync error"],
+  };
+  function setSyncState(state, err = "") {
+    syncState = state;
+    syncError = err;
+    const [cls, text] = SYNC_PILL[state];
+    const pill = $("#syncPill");
+    pill.className = `sync-pill ${cls}`;
+    pill.querySelector("span").textContent = text;
+    pill.title = state === "ok" && syncCfg.lastSync ? `Last synced ${fmtTime(new Date(syncCfg.lastSync))}` : "Sync across devices";
+    $("#footNote").innerHTML = syncCfg.token
+      ? `Synced to a private Gist on <b>@${esc(syncCfg.login || "your account")}</b>. Changes made on your laptop or phone show up on the other within a minute.`
+      : `Your schedule is saved on this device. Turn on <b>Sync</b> (top right) to keep your laptop and phone in step.`;
+    if (syncDlg.open && !syncDlg.contains(document.activeElement)) renderSyncDialog();
+    else if (syncDlg.open) updateSyncStatusLine();
+  }
+
+  // ---------- sync dialog ----------
+  const syncDlg = $("#syncDlg");
+  const TOKEN_URL = "https://github.com/settings/tokens/new?scopes=gist&description=Placement%20Console%20sync";
+  const pairLink = () => `${location.origin}${location.pathname}#sync=${encodeURIComponent(syncCfg.token)}`;
+
+  function statusLine() {
+    if (syncState === "busy") return "Syncing now…";
+    if (syncState === "offline") return "You're offline — changes are saved here and will sync when you're back online.";
+    if (syncState === "error") return `Last attempt failed: ${syncError}`;
+    return syncCfg.lastSync ? `Last synced ${fmtTime(new Date(syncCfg.lastSync))} · checks every minute and whenever you open the page` : "Not synced yet";
+  }
+  function updateSyncStatusLine() {
+    const el = syncDlg.querySelector("[data-status]");
+    if (el) el.textContent = statusLine();
+  }
+
+  function renderSyncDialog() {
+    const connected = syncCfg.token && syncState !== "auth";
+    const head = `
+      <div class="modal-head">
+        <div><div class="label">Sync</div><h2>${connected ? "Your devices are linked" : "Sync laptop &amp; phone"}</h2></div>
+        <button type="button" class="icon-btn" data-sync="close" aria-label="Close">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>
+        </button>
+      </div>`;
+    if (!connected) {
+      syncDlg.innerHTML = `${head}
+        <form class="sync-body" data-sync-form>
+          <p>Your tests get saved to a private Gist (a small file) on your own GitHub account, and every device you connect reads and writes that same file. You only set this up once.</p>
+          <ol class="steps">
+            <li><span><a href="${TOKEN_URL}" target="_blank" rel="noopener">Create a GitHub key ↗</a>. Only the <b>gist</b> box needs to be ticked, and it already is. Set the expiry to <b>No expiration</b> or a date after placements, then press <b>Generate token</b> and copy it.</span></li>
+            <li><span>Paste the key below and press <b>Connect</b>.</span></li>
+            <li><span>A QR code will appear. Scan it with your phone camera and the phone connects too.</span></li>
+          </ol>
+          <div class="field">
+            <label for="tokenInput">GitHub key</label>
+            <input id="tokenInput" type="password" placeholder="ghp_…" autocomplete="off" spellcheck="false" required>
+          </div>
+          ${syncError ? `<div class="sync-err">${esc(syncError)}</div>` : ""}
+        </form>
+        <div class="modal-foot">
+          ${syncCfg.token ? `<button type="button" class="btn ghost" data-sync="disconnect">Turn off sync</button>` : ""}
+          <div class="right">
+            <button type="button" class="btn ghost" data-sync="close">Cancel</button>
+            <button type="button" class="btn" data-sync="connect">Connect</button>
+          </div>
+        </div>`;
+      return;
+    }
+    syncDlg.innerHTML = `${head}
+      <div class="sync-body">
+        <div class="sync-status"><span class="dot"></span><div><b>Connected as @${esc(syncCfg.login || "you")}</b><span data-status>${esc(statusLine())}</span></div></div>
+        <div class="pair">
+          <div class="qr" id="qr" aria-label="QR code for linking your phone"></div>
+          <div>
+            <div class="label">Link another device</div>
+            <p style="margin-top:6px">Scan this with your phone camera, or open the link below on it. It has your key inside, so don't share it with anyone.</p>
+            <div class="copyrow">
+              <input readonly value="${esc(pairLink())}" aria-label="Device link" data-pair>
+              <button type="button" class="btn ghost sm" data-sync="copy">Copy</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-foot">
+        <button type="button" class="btn ghost" data-sync="disconnect">Turn off sync</button>
+        <div class="right">
+          ${syncCfg.gistId ? `<a class="btn ghost" href="https://gist.github.com/${esc(syncCfg.login || "")}/${esc(syncCfg.gistId)}" target="_blank" rel="noopener" style="text-decoration:none">View data</a>` : ""}
+          <button type="button" class="btn" data-sync="now">Sync now</button>
+        </div>
+      </div>`;
+    drawQR($("#qr"), pairLink());
+  }
+
+  let qrLib = null;
+  function drawQR(el, text) {
+    if (!el) return;
+    qrLib = qrLib || new Promise((resolve, reject) => {
+      const s = document.createElement("script");
+      s.src = "https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js";
+      s.onload = () => resolve(window.QRCode);
+      s.onerror = () => { qrLib = null; reject(); };
+      document.head.appendChild(s);
+    });
+    qrLib.then((QR) => {
+      el.innerHTML = "";
+      new QR(el, { text, width: 146, height: 146, colorDark: "#16171a", colorLight: "#ffffff", correctLevel: QR.CorrectLevel.M });
+    }).catch(() => { el.innerHTML = `<span class="label" style="text-align:center">QR unavailable<br>use the link</span>`; });
+  }
+
+  function openSync() {
+    renderSyncDialog();
+    if (!syncDlg.open) syncDlg.showModal();
+    const input = syncDlg.querySelector("#tokenInput");
+    if (input) setTimeout(() => input.focus(), 30);
+  }
+
+  async function doConnect() {
+    const input = syncDlg.querySelector("#tokenInput");
+    const btn = syncDlg.querySelector("[data-sync=connect]");
+    if (!input || !input.value.trim()) { input && input.focus(); return; }
+    btn.disabled = true;
+    btn.textContent = "Connecting…";
+    try {
+      await connect(input.value);
+      syncError = "";
+      renderSyncDialog();
+      toast("Sync is on");
+    } catch (e) {
+      syncError = e.status === 401 ? "GitHub didn't accept that key. Check you copied all of it." : e.message || "Couldn't connect.";
+      if (!syncCfg.login) { syncCfg = {}; try { localStorage.removeItem(SYNC_KEY); } catch {} syncState = "off"; }
+      renderSyncDialog();
+      setSyncState(syncState, syncError);
+    }
+  }
+
+  $("#syncPill").onclick = openSync;
+  syncDlg.addEventListener("click", async (e) => {
+    if (e.target === syncDlg) return syncDlg.close();
+    const act = e.target.closest("[data-sync]")?.dataset.sync;
+    if (act === "close") syncDlg.close();
+    else if (act === "connect") doConnect();
+    else if (act === "now") syncNow();
+    else if (act === "disconnect") { disconnect(); renderSyncDialog(); }
+    else if (act === "copy") {
+      const field = syncDlg.querySelector("[data-pair]");
+      try { await navigator.clipboard.writeText(field.value); toast("Link copied — open it on your phone"); }
+      catch { field.select(); toast("Press Ctrl+C to copy"); }
+    }
+  });
+  syncDlg.addEventListener("submit", (e) => { e.preventDefault(); doConnect(); });
+  syncDlg.addEventListener("close", () => { if (syncState === "off" || syncState === "ok") syncError = ""; });
+
+  // pull fresh data whenever the page comes back into view, and once a minute while visible
+  document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") syncNow(); });
+  window.addEventListener("online", () => syncNow());
+  setInterval(() => { if (document.visibilityState === "visible") syncNow(); }, 60000);
+
   // ---------- toast ----------
   let toastTimer;
   function toast(msg) {
     const el = $("#toast");
     el.textContent = msg;
-    el.classList.add("show");
+    if (el.showPopover) {
+      // re-open so it lands on top of whichever dialog is currently open
+      try { if (el.matches(":popover-open")) el.hidePopover(); el.showPopover(); } catch {}
+    }
+    requestAnimationFrame(() => el.classList.add("show"));
     clearTimeout(toastTimer);
     toastTimer = setTimeout(() => el.classList.remove("show"), 2200);
   }
@@ -763,6 +1127,23 @@
   render();
   tick();
   setInterval(tick, 1000);
+
+  // a device link looks like …/#sync=<key>; take the key and scrub it from the address bar
+  const linkToken = new URLSearchParams(location.hash.slice(1)).get("sync");
+  if (linkToken) {
+    history.replaceState(null, "", location.pathname + location.search);
+    setSyncState("busy");
+    connect(linkToken)
+      .then(() => toast("This device is now synced"))
+      .catch((e) => {
+        if (!syncCfg.login) { syncCfg = {}; try { localStorage.removeItem(SYNC_KEY); } catch {} }
+        setSyncState(syncCfg.token ? syncState : "off", e.status === 401 ? "That link's key was rejected by GitHub. Paste a fresh key here." : e.message);
+        openSync();
+      });
+  } else {
+    setSyncState(syncState);
+    syncNow();
+  }
 })();
 </script>
 </body>

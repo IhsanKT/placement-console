@@ -177,7 +177,6 @@
   }
   .icon-btn:hover { border-color: var(--ink); color: var(--ink); }
   .icon-btn.del:hover { border-color: var(--danger); color: var(--danger); }
-  .resched { color: var(--today); border-color: #ecd6c8; background: var(--today-soft); }
 
   .row.upcoming { --st: var(--accent); --st-soft: var(--accent-soft); }
   .row.today    { --st: var(--today);  --st-soft: var(--today-soft); }
@@ -214,7 +213,6 @@
   }
   .field input:focus, .field select:focus, .field textarea:focus { border-color: var(--ink); background: #fff; }
   .field textarea { resize: vertical; min-height: 70px; }
-  .note { grid-column: 1 / -1; font-size: 12.5px; color: var(--today); background: var(--today-soft); border-radius: 10px; padding: 8px 12px; font-family: var(--mono); }
   .modal-foot { display: flex; justify-content: space-between; gap: 10px; padding: 16px 24px 20px; border-top: 1px solid var(--line); }
   .modal-foot .right { display: flex; gap: 8px; margin-left: auto; }
 
@@ -378,7 +376,6 @@
         <label for="f-notes">Notes</label>
         <textarea id="f-notes" name="notes" maxlength="1000" placeholder="Syllabus, eligibility, things to bring…"></textarea>
       </div>
-      <div class="note" id="reschedNote" hidden></div>
     </div>
     <div class="modal-foot">
       <button type="button" class="btn ghost" id="deleteBtn" hidden>Delete</button>
@@ -463,10 +460,6 @@
 
   const fmtTime = (d) => d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
   const fmtDate = (d) => d.toLocaleDateString([], { weekday: "short", day: "numeric", month: "short", year: "numeric" });
-  const fmtShort = (date, time) => {
-    const d = new Date(`${date}T${time || "00:00"}`);
-    return `${d.toLocaleDateString([], { day: "numeric", month: "short" })}, ${fmtTime(d)}`;
-  };
 
   function eta(t, now = new Date()) {
     const st = statusOf(t, now);
@@ -548,8 +541,6 @@
 
   function rowHTML(t, now, i) {
     const s = startOf(t);
-    const resched = (t.history || []).length;
-    const last = resched ? t.history[resched - 1] : null;
     return `
       <article class="row ${t._st}" style="animation-delay:${Math.min(i, 8) * 30}ms">
         <div class="date-block">
@@ -562,16 +553,14 @@
           <div class="tt">${esc(t.test)}</div>
           <div class="meta">
             <span class="chip">${fmtTime(s)}${t.duration ? ` · ${t.duration}m` : ""}</span>
-            ${t.platform ? `<span class="chip">${linkify(t.platform)}</span>` : ""}
-            ${resched ? `<span class="chip resched" title="Previously ${esc(fmtShort(last.date, last.time))}">Rescheduled${resched > 1 ? ` ×${resched}` : ""} · was ${esc(fmtShort(last.date, last.time))}</span>` : ""}
-          </div>
+            ${t.platform ? `<span class="chip">${linkify(t.platform)}</span>` : ""}          </div>
           ${t.notes ? `<div class="notes">${linkify(t.notes)}</div>` : ""}
         </div>
         <div class="side">
           <span class="status"><span class="dot"></span>${STATUS_LABEL[t._st]}</span>
           <span class="eta">${eta(t, now)}</span>
           <div class="actions">
-            <button class="icon-btn" data-edit="${t.id}" aria-label="Edit ${esc(t.company)}" title="Edit / reschedule">
+            <button class="icon-btn" data-edit="${t.id}" aria-label="Edit ${esc(t.company)}" title="Edit">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16v4Z"/><path d="m13.5 6.5 4 4"/></svg>
             </button>
             <button class="icon-btn del" data-del="${t.id}" aria-label="Delete ${esc(t.company)}" title="Delete">
@@ -652,7 +641,6 @@
     $("#modalTitle").textContent = t ? `Edit ${t.company}` : "Schedule a test";
     $("#saveBtn").textContent = t ? "Save changes" : "Save test";
     $("#deleteBtn").hidden = !t;
-    const note = $("#reschedNote");
     if (t) {
       form.company.value = t.company;
       form.test.value = t.test;
@@ -661,10 +649,7 @@
       form.duration.value = t.duration || "";
       form.platform.value = t.platform || "";
       form.notes.value = t.notes || "";
-      note.hidden = false;
-      note.textContent = "Changing the date or time marks this test as rescheduled and keeps the old slot on record.";
     } else {
-      note.hidden = true;
       const tomorrow = new Date(Date.now() + 86400000);
       form.date.value = `${tomorrow.getFullYear()}-${pad(tomorrow.getMonth() + 1)}-${pad(tomorrow.getDate())}`;
       form.time.value = "10:00";
@@ -691,14 +676,13 @@
     if (editingId) {
       const t = tests.find((x) => x.id === editingId);
       if (t) {
-        const moved = t.date !== entry.date || t.time !== entry.time;
-        if (moved) t.history = [...(t.history || []), { date: t.date, time: t.time, changedAt: new Date().toISOString() }];
         Object.assign(t, entry, { updatedAt: new Date().toISOString() });
-        toast(moved ? `${entry.company} rescheduled` : `${entry.company} updated`);
+        delete t.history; // old slots aren't kept; an edit simply replaces the test
+        toast(`${entry.company} updated`);
       }
     } else {
       const ts = new Date().toISOString();
-      tests.push({ id: uid(), ...entry, history: [], createdAt: ts, updatedAt: ts });
+      tests.push({ id: uid(), ...entry, createdAt: ts, updatedAt: ts });
       toast(`${entry.company} added`);
       if (statusOf(entry) === "done") filter = "all";
     }
@@ -785,7 +769,7 @@
       const ts = new Date().toISOString();
       valid.forEach((t) => {
         const id = t.id || uid();
-        byId.set(id, { history: [], ...t, id, updatedAt: ts });
+        byId.set(id, { ...t, id, updatedAt: ts });
         delete deleted[id];
       });
       tests = [...byId.values()];

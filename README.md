@@ -4,7 +4,7 @@ A personal tracker for upcoming placement tests: company, round, date, time, pla
 
 - **Live countdown** to the next test
 - **Auto status**: tests turn *Today* → *In progress* → *Completed* (greyed out) on their own
-- **Edit / reschedule**: changing the date or time keeps the old slot and tags the test as *Rescheduled*
+- **Edit**: change any detail of a test; the update simply replaces the old entry
 - **Laptop ↔ phone sync** through a private Gist on your own GitHub account
 - Search and filter (Upcoming / Completed / All); press `N` to add a test
 
